@@ -108,6 +108,9 @@ fi
 mkdir -p "build/$build_type"
 mkdir -p "lib/$build_type"
 
+mkdir -p "$build_cache_dir/$build_type/$project_name"
+mkdir -p "$output_dir/$build_type/$project_name"
+
 compile_flags="-I ./include -I ./${dependences["CytexLab-Platform.Base"]}/include -nostdlib -ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector"
 
 if [ "$build_type" = "Debug" ]; then
