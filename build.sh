@@ -22,11 +22,10 @@ NC='\033[0m' # No Color
 project_name="CytexLab.Kernel.MemFunc"
 total_operations=2
 
-mkdir -p build
-mkdir -p lib
-
 # Инициализация переменных
 build_type=""
+build_cache_dir=""
+output_dir=""
 hide=0
 declare -A dependences
 
@@ -41,6 +40,14 @@ while [ $# -gt 0 ]; do
             hide=1
             shift
             ;;
+		--build-cache|-bh)
+			build_cache_dir="$2"
+			shift 2
+			;;
+		--output-dir|-od)
+			output_dir="$2"
+			shift 2
+			;;
         --dependence|-d)
 			dependences["$2"]="$3"
 			shift 3
@@ -69,7 +76,7 @@ fi
 check_depen() {
 	if [ -z "${dependences["$1"]}" ]; then
 		if [ -d "./deps/$1" ]; then
-			dependences["$1"] = "./deps/$1"
+			dependences["$1"]="./deps/$1"
 		else
 			echo -e "${RED}${BOLD}[ERROR]${NC} Не найдена зависимость $1"
 			echo -e "${BLUE}${BOLD}[INFO]${NC} Укажите путь до корня пакета через параметр -d/--dependence"
@@ -80,6 +87,16 @@ check_depen() {
 }
 
 check_depen "CytexLab-Platform.Base"
+
+if [ -z "$build_cache_dir" ]; then
+	build_cache_dir="build"
+fi
+if [ -z "$output_dir" ]; then
+	output_dir="lib"
+fi
+
+mkdir -p "$build_cache_dir"
+mkdir -p "$output_dir"
 
 # Проверка и установка типа сборки
 if [ "$build_type" != "Debug" ] && [ "$build_type" != "Release" ]; then
@@ -107,15 +124,15 @@ log() {
 
 compile() {
 	log $2 $total_operations $1
-	if ! clang++ -c "./src/$1" -o "./build/$build_type/$1.o" $compile_flags 2>&1; then
+	if ! clang++ -c "./src/$1" -o "$build_cache_dir/$build_type/$project_name/$1.o" $compile_flags 2>&1; then
 		echo -e "${RED}${BOLD}[ERROR]${NC} Ошибка компиляции $1"
 		exit 1
 	fi
 }
 
 archive() {
-	log $2 $total_operations "Archiving..."
-	local obj_files=$(find "./build/$build_type" -name "*.o" )
+	log $2 $total_operations "Archiving $project_name..."
+	local obj_files=$(find "$build_cache_dir/$build_type/$project_name" -name "*.o" )
 	if ! llvm-ar rcs $1 $obj_files 2>&1; then
 		echo -e "${RED}${BOLD}[ERROR]${NC} Ошибка архивирования"
 		exit 1
@@ -124,7 +141,7 @@ archive() {
 
 compile "lib.cpp" 1
 
-archive "./lib/$build_type/$build_type.$project_name.a" 2
+archive "$output_dir/$build_type/$build_type.$project_name.a" 2
 
 # Если не указан флаг --hide, ждём нажатия Enter
 if [ "$hide" -eq 0 ]; then
